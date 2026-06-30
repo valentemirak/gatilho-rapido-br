@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gatilho Rápido BR - Jogo de Palavras</title>
+    <style>
+        /* --- ESTILO BASE (PADRÃO PARA COMPUTADOR) --- */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: #fff; text-align: center; padding: 20px; margin: 0; }
+        .container { background: #2a2a2a; padding: 30px; border-radius: 12px; display: inline-block; box-shadow: 0px 4px 15px rgba(0,0,0,0.5); max-width: 400px; width: 100%; margin-top: 50px; box-sizing: border-box; }
+        h1 { color: #ffcc00; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        p { color: #aaa; margin-top: 0; margin-bottom: 25px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; font-size: 16px; border-radius: 6px; border: 2px solid #444; background: #333; color: white; text-align: center; box-sizing: border-box; }
+        input:focus { border-color: #ffcc00; outline: none; }
+        
+        button { width: 100%; padding: 12px; margin-top: 10px; font-size: 16px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; transition: 0.2s; box-sizing: border-box; }
+        .btn-principal { background: #ffcc00; color: #1a1a1a; font-size: 18px; }
+        .btn-principal:hover { background: #e6b800; transform: scale(1.02); }
+        .btn-secundario { background: #444; color: #fff; margin-top: 5px; }
+        .btn-secundario:hover { background: #555; }
+        
+        .divisor { margin: 15px 0; color: #666; font-size: 14px; display: flex; align-items: center; justify-content: center; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+        .divisor::before, .divisor::after { content: ""; flex: 1; background: #444; height: 1px; margin: 0 10px; }
+
+        /* Arena do Jogo - Lado a Lado no PC */
+        #tela-jogo { display: none; }
+        .painel-jogo { background: #2a2a2a; padding: 20px; border-radius: 12px; max-width: 1200px; width: 100%; display: inline-flex; flex-direction: row; gap: 20px; text-align: left; margin-top: 20px; justify-content: center; box-sizing: border-box; }
+        
+        .cronometro { background: #444; color: white; font-size: 24px; font-weight: bold; padding: 10px 20px; border-radius: 50px; text-align: center; min-width: 40px; margin: 0 auto 10px auto; display: inline-block; }
+        .info-sala { font-size: 18px; color: #ffcc00; font-weight: bold; margin-bottom: 15px; text-align: center; width: 100%; }
+        
+        /* Placar Esquerdo */
+        .placar-esquerdo { background: #1a1a1a; width: 200px; min-width: 200px; border-radius: 8px; border: 1px solid #444; padding: 15px; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; }
+        .titulo-placar { font-size: 16px; font-weight: bold; color: #ffcc00; border-bottom: 1px solid #333; padding-bottom: 5px; text-transform: uppercase; text-align: center; }
+        .item-jogador { display: flex; justify-content: space-between; font-size: 15px; padding: 8px; background: #252525; border-radius: 4px; transition: 0.3s; }
+        .item-jogador.desenhista-ativo { border-left: 4px solid #00ffcc; background: #1e2d29; }
+
+        /* Bloco Central da Lousa */
+        .bloco-desenho { display: flex; flex-direction: column; gap: 10px; position: relative; width: 500px; min-width: 500px; }
+        .area-desenho { background: white; border-radius: 8px; cursor: crosshair; display: block; width: 500px; height: 350px; box-sizing: border-box; touch-action: none; }
+        .ferramentas { display: flex; gap: 10px; align-items: center; background: #1a1a1a; padding: 10px; border-radius: 6px; }
+        .btn-ferramenta { width: auto; padding: 8px 15px; margin: 0; font-size: 14px; }
+        
+        #painel-escolha { position: absolute; top: 0; left: 0; width: 500px; height: 350px; background: rgba(0,0,0,0.85); border-radius: 8px; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; box-sizing: border-box; }
+        .btn-escolha { width: 60%; background: #00ffcc; color: #1a1a1a; font-size: 20px; margin: 10px 0; border-radius: 8px; }
+        .btn-escolha:hover { background: #00ccaa; transform: scale(1.05); }
+
+        /* --- CHAT CONFIGURADO --- */
+        .lateral { width: 320px; min-width: 320px; display: flex; flex-direction: column; box-sizing: border-box; }
+        .chat { background: #1a1a1a; height: 290px; border-radius: 6px; padding: 12px; overflow-y: auto; border: 1px solid #444; margin-bottom: 10px; box-sizing: border-box; }
+        .msg-sistema { color: #00ffcc; font-weight: bold; margin-bottom: 5px; }
+        .lateral input { width: 100%; text-align: left; padding: 12px; margin: 0; }
+        
+        #btnComecarJogo { display: none; background: #22c55e; color: white; margin-bottom: 15px; font-size: 20px; }
+        #btnComecarJogo:hover { background: #16a34a; }
+
+        .btn-voz-mutado { background: #dc2626; color: white; border-radius: 6px; padding: 10px; font-weight: bold; width: auto; cursor: pointer; display: inline-block; margin-left: 10px; }
+        .btn-voz-falando { background: #22c55e; color: white; border-radius: 6px; padding: 10px; font-weight: bold; width: auto; cursor: pointer; display: inline-block; margin-left: 10px; }
+
+        /* --- DETECÇÃO AUTOMÁTICA DE CELULAR (TELAS MENORES) --- */
+        @media (max-width: 1050px) {
+            body { padding: 10px; }
+            .container { margin-top: 30px; width: 95%; padding: 20px; }
+            h1 { font-size: 22px; }
+            
+            /* Empilha os blocos verticalmente no celular */
+            .painel-jogo { flex-direction: column; align-items: center; padding: 15px; gap: 15px; }
+            
+            /* Adapta larguras para móvel */
+            .placar-esquerdo, .bloco-desenho, .lateral { width: 100%; max-width: 100%; min-width: 0; }
+            
+            /* Adapta o Canvas proporcionalmente */
+            .area-desenho { width: 100%; height: auto; aspect-ratio: 500 / 350; }
+            #painel-escolha { width: 100%; height: 100%; }
+            
+            .chat { height: 160px; font-size: 14px; }
+            .ferramentas { flex-wrap: wrap; gap: 5px; padding: 8px; }
+            .btn-ferramenta { flex: 1; min-width: 70px; padding: 6px; font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="tela-login" class="container">
+        <h1>Gatilho Rápido BR 🎯🇧🇷</h1>
+        <p>Pense rápido, digite primeiro!</p>
+        <input type="text" id="nomeInput" placeholder="Seu apelido">
+        
+        <div class="divisor">MODO RÁPIDO</div>
+        <button class="btn-principal" style="background: #00ffcc; color: #1a1a1a;" onclick="jogarComAleatorios()">🎮 JOGAR COM ALEATÓRIOS</button>
+
+        <div class="divisor">SALA PRIVADA</div>
+        <button class="btn-secundario" style="background: #ffcc00; color: #1a1a1a; font-weight: bold;" onclick="criarNovaSala()">CRIAR SALA PRIVADA</button>
+        <input type="text" id="salaInput" placeholder="Código da Sala existente">
+        <button class="btn-secundario" onclick="entrarSalaExistente()">ENTRAR NA SALA</button>
+    </div>
+
+    <div id="tela-jogo">
+        <div style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+            <h1>Gatilho Rápido BR 🎯</h1>
+            <div id="timer" class="cronometro">--</div>
+            <button id="btnControleVoz" class="btn-voz-mutado" onclick="alternarChatVoz()">🔇 VOZ: DESATIVADA</button>
+        </div>
+        
+        <button id="btnComecarJogo" onclick="solicitarInicio()">▶️ COMEÇAR JOGO</button>
+
+        <div class="painel-jogo">
+            <div id="infoSalaTexto" class="info-sala">Sala: ----</div>
+            
+            <div class="placar-esquerdo">
+                <div class="titulo-placar">Ranking (100 pts)</div>
+                <div id="containerPlacar"></div>
+            </div>
+
+            <div class="bloco-desenho">
+                <div id="painel-escolha">
+                    <h2 style="color: #ffcc00; margin-bottom: 5px;">Escolha uma palavra:</h2>
+                    <p style="color: #aaa; margin-bottom: 15px;">Categoria: <span id="categoriaEscolhaTexto">---</span></p>
+                    <button id="btnOpcao1" class="btn-escolha" onclick="escolher('opcao1')">Opção 1</button>
+                    <button id="btnOpcao2" class="btn-escolha" onclick="escolher('opcao2')">Opção 2</button>
+                </div>
+
+                <canvas id="lousa" class="area-desenho" width="500" height="350"></canvas>
+                
+                <div class="ferramentas">
+                    <label>Cor: </label>
+                    <input type="color" id="seletorCor" value="#000000" style="width:40px; height:35px; padding:0; margin:0; cursor:pointer;">
+                    <button class="btn-ferramenta btn-principal" onclick="activarLapis()">✏️ Lápis</button>
+                    <button class="btn-ferramenta btn-secundario" onclick="ativarBorracha()">🧽 Borracha</button>
+                    <button class="btn-ferramenta btn-secundario" onclick="limparLousa()" style="background:#cc3333; color:white;">🗑️ Limpar Tudo</button>
+                </div>
+            </div>
+            
+            <div class="lateral">
+                <div id="caixaChat" class="chat"></div>
+                <input type="text" id="palpiteInput" placeholder="Digite seu palpite aqui...">
+            </div>
+        </div>
+    </div>
+
+    <div id="reprodutoresAudio" style="display: none;"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let meuNome = "";
+        let salaAtual = "";
+        
+        const canvas = document.getElementById('lousa');
+        const ctx = canvas.getContext('2d');
+        let desenhando = false;
+        let modoBorracha = false;
+        let corAtual = "#000000";
+        let souODesenhistadaVez = false;
+        let palavrasOpcoesLocais = [];
+
+        let streamLocal = null;
+        let conexoesPeer = {};
+        let vozAtiva = false;
+        const configWebRTC = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }; // Sintaxe corrigida padrão STUN
+
+        async function alternarChatVoz() {
+            const botao = document.getElementById('btnControleVoz');
+            if (!vozAtiva) {
+                try {
+                    streamLocal = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    vozAtiva = true;
+                    botao.className = "btn-voz-falando";
+                    botao.innerText = "🎙️ VOZ: LIGADA";
+                    socket.emit('conectar_voz_sala', { sala: salaAtual });
+                } catch (erro) {
+                    alert("Não foi possível acessar seu microfone. Verifique as permissões do navegador (precisa ser HTTPS)!");
+                    console.error(erro);
+                }
+            } else {
+                if (streamLocal) streamLocal.getTracks().forEach(track => track.stop());
+                streamLocal = null;
+                vozAtiva = false;
+                botao.className = "btn-voz-mutado";
+                botao.innerText = "🔇 VOZ: DESATIVADA";
+                Object.keys(conexoesPeer).forEach(id => {
+                    conexoesPeer[id].close();
+                    delete conexoesPeer[id];
+                    const elementoAudio = document.getElementById(`audio-${id}`);
+                    if (elementoAudio) elementoAudio.remove();
+                });
+            }
+        }
+
+        function configurarConexaoPeer(idParceiro, iniciarChamada = false) {
+            if (conexoesPeer[idParceiro]) return conexoesPeer[idParceiro];
+            const peer = new RTCPeerConnection(configWebRTC);
+            conexoesPeer[idParceiro] = peer;
+            if (streamLocal) streamLocal.getTracks().forEach(track => peer.addTrack(track, streamLocal));
+
+            peer.ontrack = (evento) => {
+                let elementoAudio = document.getElementById(`audio-${idParceiro}`);
+                if (!elementoAudio) {
+                    elementoAudio = document.createElement('audio');
+                    elementoAudio.id = `audio-${idParceiro}`;
+                    elementoAudio.autoplay = true;
+                    document.getElementById('reprodutoresAudio').appendChild(elementoAudio);
+                }
+                elementoAudio.srcObject = evento.streams[0];
+            };
+
+            peer.onicecandidate = (evento) => {
+                if (evento.candidate) socket.emit('enviar_ice_candidate', { candidate: evento.candidate, para: idParceiro });
+            };
+
+            if (iniciarChamada) {
+                peer.createOffer()
+                    .then(oferta => peer.setLocalDescription(oferta))
+                    .then(() => socket.emit('enviar_oferta_voz', { oferta: peer.localDescription, para: idParceiro }));
+            }
+            return peer;
+        }
+
+        socket.on('novo_participante_voz', (dados) => { if (vozAtiva) configurarConexaoPeer(dados.id, true); });
+        socket.on('receber_oferta_voz', (dados) => {
+            if (!vozAtiva) return;
+            const peer = configurarConexaoPeer(dados.de, false);
+            peer.setRemoteDescription(new RTCSessionDescription(dados.oferta))
+                .then(() => peer.createAnswer())
+                .then(resposta => peer.setLocalDescription(resposta))
+                .then(() => socket.emit('enviar_resposta_voz', { resposta: peer.localDescription, para: dados.de }));
+        });
+        socket.on('receber_resposta_voz', (dados) => { const peer = conexoesPeer[dados.de]; if (peer) peer.setRemoteDescription(new RTCSessionDescription(dados.resposta)); });
+        socket.on('receber_ice_candidate', (dados) => { const peer = conexoesPeer[dados.de]; if (peer) peer.addIceCandidate(new RTCIceCandidate(dados.candidate)); });
+        socket.on('usuario_saiu_voz', (dados) => { if (conexoesPeer[dados.id]) { conexoesPeer[dados.id].close(); delete conexoesPeer[dados.id]; } const elementoAudio = document.getElementById(`audio-${dados.id}`); if (elementoAudio) elementoAudio.remove(); });
+
+        document.getElementById('seletorCor').addEventListener('input', (e) => { if(!modoBorracha) corAtual = e.target.value; });
+        function activarLapis() { modoBorracha = false; corAtual = document.getElementById('seletorCor').value; }
+        function ativarBorracha() { modoBorracha = true; }
+
+        /* FUNÇÕES DE GERENCIAMENTO DE ENTRADA */
+        function jogarComAleatorios() {
+            const nome = document.getElementById('nomeInput').value;
+            if(nome.trim() === '') { alert('Preencha seu apelido primeiro!'); return; }
+            meuNome = nome;
+            socket.emit('buscar_partida_aleatoria');
+        }
+
+        socket.on('sala_aleatoria_encontrada', (dados) => {
+            salaAtual = dados.sala;
+            conectar(meuNome, dados.sala);
+        });
+
+        function criarNovaSala() {
+            const nome = document.getElementById('nomeInput').value;
+            if(nome.trim() === '') { alert('Preencha seu apelido primeiro!'); return; }
+            const codigoAleatorio = "SALA-" + Math.floor(1000 + Math.random() * 9000);
+            meuNome = nome; salaAtual = codigoAleatorio;
+            conectar(nome, codigoAleatorio);
+        }
+
+        function entrarSalaExistente() {
+            const nome = document.getElementById('nomeInput').value;
+            const sala = document.getElementById('salaInput').value;
+            if(nome.trim() === '' || sala.trim() === '') { alert('Preencha seu apelido e o código da sala!'); return; }
+            meuNome = nome; salaAtual = sala;
+            conectar(nome, sala);
+        }
+
+        function conectar(nome, sala) {
+            socket.emit('entrar_sala', { nome: nome, sala: sala });
+            document.getElementById('tela-login').style.display = 'none';
+            document.getElementById('tela-jogo').style.display = 'block';
+            
+            if (sala.startsWith('SALA-PUBLICA-')) {
+                document.getElementById('infoSalaTexto').innerText = "Partida Pública Automática";
+            } else {
+                document.getElementById('infoSalaTexto').innerText = "Código da Sala: " + sala;
+            }
+        }
+
+        socket.on('voce_e_o_dono', () => { 
+            if(!salaAtual.startsWith('SALA-PUBLICA-')) {
+                document.getElementById('btnComecarJogo').style.display = 'inline-block'; 
+            }
+        });
+        
+        function solicitarInicio() { if (confirm("Tem certeza que deseja começar o jogo agora?")) { document.getElementById('btnComecarJogo').style.display = 'none'; socket.emit('iniciar_jogo_dono', { sala: salaAtual }); } }
+
+        socket.on('atualizar_placar_visual', (listaPlacar) => {
+            const container = document.getElementById('containerPlacar');
+            container.innerHTML = ""; 
+            listaPlacar.forEach(jogador => {
+                const classeDesenhista = jogador.eDesenhista ? "desenhista-ativo" : "";
+                const sufixoNome = jogador.eDesenhista ? " 🖌️" : "";
+                container.innerHTML += `<div class="item-jogador ${classeDesenhista}"><span><strong>${jogador.nome}</strong>${sufixoNome}</span><span style="color:#ffcc00">${jogador.pontos} pts</span></div>`;
+            });
+        });
+
+        socket.on('fase_escolha', (dados) => {
+            souODesenhistadaVez = true; palavrasOpcoesLocais = dados.opcoes;
+            document.getElementById('categoriaEscolhaTexto').innerText = dados.categoria.toUpperCase();
+            document.getElementById('btnOpcao1').innerText = dados.opcoes[0].toUpperCase();
+            document.getElementById('btnOpcao2').innerText = dados.opcoes[1].toUpperCase();
+            document.getElementById('painel-escolha').style.display = 'flex'; 
+            document.querySelector('.ferramentas').style.display = 'none';
+            
+            const tituloSala = salaAtual.startsWith('SALA-PUBLICA-') ? "Partida Pública" : `Sala: ${salaAtual}`;
+            document.getElementById('infoSalaTexto').innerHTML = `${tituloSala} <br> <span style="color:#ffcc00">ESCOLHA UMA PALAVRA!</span>`;
+            document.getElementById('timer').style.background = '#ffcc00'; 
+            document.getElementById('timer').innerText = dados.tempo;
+        });
+
+        function escolher(opcao) { const index = opcao === 'opcao1' ? 0 : 1; document.getElementById('painel-escolha').style.display = 'none'; socket.emit('palavra_escolhida', { sala: salaAtual, word: palavrasOpcoesLocais[index] || palavrasOpcoesLocais[index] }); socket.emit('palavra_escolhida', { sala: salaAtual, palavra: palavrasOpcoesLocais[index] }); }
+
+        socket.on('definir_papeis', (dados) => {
+            souODesenhistadaVez = dados.eDesenhista;
+            const barraFerramentas = document.querySelector('.ferramentas');
+            const textoSala = document.getElementById('infoSalaTexto');
+            const tituloSala = salaAtual.startsWith('SALA-PUBLICA-') ? "Partida Pública" : `Sala: ${salaAtual}`;
+            
+            // Sempre limpa o canvas ao mudar os papéis/rodadas para evitar herança de desenhos anteriores
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+
+            if(dados.status === "espera") { 
+                document.getElementById('painel-escolha').style.display = 'none'; 
+                barraFerramentas.style.display = 'none'; 
+                textoSala.innerHTML = `${tituloSala} <br> <span style="color:#aaa">Aguardando jogadores para iniciar...</span>`; 
+                return; 
+            }
+            if(dados.status === "escolhendo") { 
+                document.getElementById('btnComecarJogo').style.display = 'none'; 
+                document.getElementById('painel-escolha').style.display = 'none'; 
+                barraFerramentas.style.display = 'none'; 
+                textoSala.innerHTML = `${tituloSala} <br> <span style="color:#aaa">O desenhista está escolhendo a palavra...</span>`; 
+                return; 
+            }
+            if (souODesenhistadaVez) { 
+                document.getElementById('painel-escolha').style.display = 'none'; 
+                barraFerramentas.style.display = 'flex'; 
+                textoSala.innerHTML = `${tituloSala} <br> <span style="color:#00ffcc">Você está desenhando: ${dados.palavra.toUpperCase()}</span>`; 
+            } 
+            else { 
+                document.getElementById('painel-escolha').style.display = 'none'; 
+                barraFerramentas.style.display = 'none'; 
+                textoSala.innerHTML = `${tituloSala} <br> <span style="color:#ffcc00">Adivinhe o desenho! Categoria: ${dados.categoria.toUpperCase()}</span>`; 
+            }
+        });
+
+        socket.on('tempo_atualizado', (tempo) => { document.getElementById('timer').innerText = tempo; });
+        socket.on('tempo_jogo_iniciado', (tempo) => { document.getElementById('timer').style.background = '#ff3333'; document.getElementById('timer').innerText = tempo; });
+
+        function obterCoordenadas(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clienteX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clienteY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: (clienteX - rect.left) * (canvas.width / rect.width),
+                y: (clienteY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        function iniciarDesenho(e) { 
+            if(!souODesenhistadaVez) return; 
+            desenhando = true; 
+            ctx.beginPath(); // Reseta o traço atual localmente
+            const coords = obterCoordenadas(e);
+            ctx.moveTo(coords.x, coords.y);
+            // Avisa o servidor que um novo traço começou
+            socket.emit('desenhando', { sala: salaAtual, x: coords.x, y: coords.y, novoTraco: true });
+            moverDesenho(e); 
+        }
+        
+        function pararDesenho() { 
+            desenhando = false; 
+            ctx.beginPath(); 
+            socket.emit('desenhando', { sala: salaAtual, x: 0, y: 0, novoTraco: true });
+        }
+        
+        function moverDesenho(e) {
+            if (!desenhando || !souODesenhistadaVez) return;
+            const coords = obterCoordenadas(e);
+            const corFinal = modoBorracha ? "#FFFFFF" : corAtual;
+            const tamanhoTraço = modoBorracha ? 20 : 4;
+
+            ctx.lineWidth = tamanhoTraço; ctx.lineCap = 'round'; ctx.strokeStyle = corFinal;
+            ctx.lineTo(coords.x, coords.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(coords.x, coords.y);
+
+            socket.emit('desenhando', { sala: salaAtual, x: coords.x, y: coords.y, novoTraco: false, col: corFinal, tamanho: tamanhoTraço });
+        }
+
+        canvas.addEventListener('mousedown', iniciarDesenho);
+        canvas.addEventListener('mouseup', pararDesenho);
+        canvas.addEventListener('mouseleave', pararDesenho);
+        canvas.addEventListener('mousemove', moverDesenho);
+
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); iniciarDesenho(e); }, { passive: false });
+        canvas.addEventListener('touchend', pararDesenho);
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); moverDesenho(e); }, { passive: false });
+
+        function limparLousa() { if(!souODesenhistadaVez) return; ctx.clearRect(0, 0, canvas.width, canvas.height); socket.emit('limpar_lousa', { sala: salaAtual }); }
+        
+        socket.on('desenhar_ouvinte', (dados) => { 
+            if (dados.novoTraco) {
+                ctx.beginPath();
+                ctx.moveTo(dados.x, dados.y);
+            } else {
+                ctx.lineWidth = dados.tamanho; ctx.lineCap = 'round'; ctx.strokeStyle = dados.col; ctx.lineTo(dados.x, dados.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(dados.x, dados.y); 
+            }
+        });
+        
+        socket.on('limpar_lousa_ouvinte', () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); });
+
+        document.getElementById('palpiteInput').addEventListener('keypress', function(evento) {
+            if (evento.key === 'Enter') {
+                const texto = this.value; if (texto.trim() === '') return;
+                socket.emit('enviar_palpite', { nome: meuNome, sala: salaAtual, mensagem: texto }); this.value = '';
+                this.blur();
+            }
+        });
+
+        socket.on('mensagem_sistema', (mensagem) => { const chat = document.getElementById('caixaChat'); chat.innerHTML += `<div class="msg-sistema">${mensagem}</div>`; chat.scrollTop = chat.scrollHeight; });
+        socket.on('receber_palpite', (dados) => { const chat = document.getElementById('caixaChat'); chat.innerHTML += `<div><strong>${dados.nome}:</strong> ${dados.mensagem}</div>`; chat.scrollTop = chat.scrollHeight; });
+    </script>
+</body>
+</html>
