@@ -22,7 +22,7 @@
         .divisor { margin: 15px 0; color: #666; font-size: 14px; display: flex; align-items: center; justify-content: center; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
         .divisor::before, .divisor::after { content: ""; flex: 1; background: #444; height: 1px; margin: 0 10px; }
 
-        /* Arena do Jogo - Lado a Lado no PC */
+        /* Arena do Jogo */
         #tela-jogo { display: none; }
         .painel-jogo { background: #2a2a2a; padding: 20px; border-radius: 12px; max-width: 1200px; width: 100%; display: inline-flex; flex-direction: row; gap: 20px; text-align: left; margin-top: 20px; justify-content: center; box-sizing: border-box; }
         
@@ -45,7 +45,7 @@
         .btn-escolha { width: 60%; background: #00ffcc; color: #1a1a1a; font-size: 20px; margin: 10px 0; border-radius: 8px; }
         .btn-escolha:hover { background: #00ccaa; transform: scale(1.05); }
 
-        /* --- CHAT CONFIGURADO --- */
+        /* Chat */
         .lateral { width: 320px; min-width: 320px; display: flex; flex-direction: column; box-sizing: border-box; }
         .chat { background: #1a1a1a; height: 290px; border-radius: 6px; padding: 12px; overflow-y: auto; border: 1px solid #444; margin-bottom: 10px; box-sizing: border-box; }
         .msg-sistema { color: #00ffcc; font-weight: bold; margin-bottom: 5px; }
@@ -57,22 +57,15 @@
         .btn-voz-mutado { background: #dc2626; color: white; border-radius: 6px; padding: 10px; font-weight: bold; width: auto; cursor: pointer; display: inline-block; margin-left: 10px; }
         .btn-voz-falando { background: #22c55e; color: white; border-radius: 6px; padding: 10px; font-weight: bold; width: auto; cursor: pointer; display: inline-block; margin-left: 10px; }
 
-        /* --- DETECÇÃO AUTOMÁTICA DE CELULAR (TELAS MENORES) --- */
+        /* --- DESIGN RESPONSIVO CELULAR --- */
         @media (max-width: 1050px) {
             body { padding: 10px; }
             .container { margin-top: 30px; width: 95%; padding: 20px; }
             h1 { font-size: 22px; }
-            
-            /* Empilha os blocos verticalmente no celular */
             .painel-jogo { flex-direction: column; align-items: center; padding: 15px; gap: 15px; }
-            
-            /* Adapta larguras para móvel */
             .placar-esquerdo, .bloco-desenho, .lateral { width: 100%; max-width: 100%; min-width: 0; }
-            
-            /* Adapta o Canvas proporcionalmente */
             .area-desenho { width: 100%; height: auto; aspect-ratio: 500 / 350; }
             #painel-escolha { width: 100%; height: 100%; }
-            
             .chat { height: 160px; font-size: 14px; }
             .ferramentas { flex-wrap: wrap; gap: 5px; padding: 8px; }
             .btn-ferramenta { flex: 1; min-width: 70px; padding: 6px; font-size: 13px; }
@@ -140,9 +133,12 @@
 
     <div id="reprodutoresAudio" style="display: none;"></div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Script carregado de forma externa para funcionar no Itch.io conectando à nuvem -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
-        const socket = io();
+        // Aponta para o seu servidor definitivo hospedado no Render
+        const socket = io('https://gatilho-rapido-br.onrender.com');
+        
         let meuNome = "";
         let salaAtual = "";
         
@@ -157,7 +153,7 @@
         let streamLocal = null;
         let conexoesPeer = {};
         let vozAtiva = false;
-        const configWebRTC = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }; // Sintaxe corrigida padrão STUN
+        const configWebRTC = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
         async function alternarChatVoz() {
             const botao = document.getElementById('btnControleVoz');
@@ -169,7 +165,7 @@
                     botao.innerText = "🎙️ VOZ: LIGADA";
                     socket.emit('conectar_voz_sala', { sala: salaAtual });
                 } catch (erro) {
-                    alert("Não foi possível acessar seu microfone. Verifique as permissões do navegador (precisa ser HTTPS)!");
+                    alert("Não foi possível acessar seu microfone. Verifique se o site está usando HTTPS ou as permissões!");
                     console.error(erro);
                 }
             } else {
@@ -231,9 +227,8 @@
 
         document.getElementById('seletorCor').addEventListener('input', (e) => { if(!modoBorracha) corAtual = e.target.value; });
         function activarLapis() { modoBorracha = false; corAtual = document.getElementById('seletorCor').value; }
-        function ativarBorracha() { modoBorracha = true; }
+        function activarBorracha() { modoBorracha = true; }
 
-        /* FUNÇÕES DE GERENCIAMENTO DE ENTRADA */
         function jogarComAleatorios() {
             const nome = document.getElementById('nomeInput').value;
             if(nome.trim() === '') { alert('Preencha seu apelido primeiro!'); return; }
@@ -306,7 +301,11 @@
             document.getElementById('timer').innerText = dados.tempo;
         });
 
-        function escolher(opcao) { const index = opcao === 'opcao1' ? 0 : 1; document.getElementById('painel-escolha').style.display = 'none'; socket.emit('palavra_escolhida', { sala: salaAtual, word: palavrasOpcoesLocais[index] || palavrasOpcoesLocais[index] }); socket.emit('palavra_escolhida', { sala: salaAtual, palavra: palavrasOpcoesLocais[index] }); }
+        function escolher(opcao) { 
+            const index = opcao === 'opcao1' ? 0 : 1; 
+            document.getElementById('painel-escolha').style.display = 'none'; 
+            socket.emit('palavra_escolhida', { sala: salaAtual, palavra: palavrasOpcoesLocais[index] }); 
+        }
 
         socket.on('definir_papeis', (dados) => {
             souODesenhistadaVez = dados.eDesenhista;
@@ -314,7 +313,6 @@
             const textoSala = document.getElementById('infoSalaTexto');
             const tituloSala = salaAtual.startsWith('SALA-PUBLICA-') ? "Partida Pública" : `Sala: ${salaAtual}`;
             
-            // Sempre limpa o canvas ao mudar os papéis/rodadas para evitar herança de desenhos anteriores
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.beginPath();
 
@@ -359,15 +357,15 @@
         function iniciarDesenho(e) { 
             if(!souODesenhistadaVez) return; 
             desenhando = true; 
-            ctx.beginPath(); // Reseta o traço atual localmente
+            ctx.beginPath(); 
             const coords = obterCoordenadas(e);
             ctx.moveTo(coords.x, coords.y);
-            // Avisa o servidor que um novo traço começou
             socket.emit('desenhando', { sala: salaAtual, x: coords.x, y: coords.y, novoTraco: true });
             moverDesenho(e); 
         }
         
         function pararDesenho() { 
+            if (!desenhando) return;
             desenhando = false; 
             ctx.beginPath(); 
             socket.emit('desenhando', { sala: salaAtual, x: 0, y: 0, novoTraco: true });
@@ -377,12 +375,12 @@
             if (!desenhando || !souODesenhistadaVez) return;
             const coords = obterCoordenadas(e);
             const corFinal = modoBorracha ? "#FFFFFF" : corAtual;
-            const tamanhoTraço = modoBorracha ? 20 : 4;
+            const tamanhoTraco = modoBorracha ? 20 : 4;
 
-            ctx.lineWidth = tamanhoTraço; ctx.lineCap = 'round'; ctx.strokeStyle = corFinal;
+            ctx.lineWidth = tamanhoTraco; ctx.lineCap = 'round'; ctx.strokeStyle = corFinal;
             ctx.lineTo(coords.x, coords.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(coords.x, coords.y);
 
-            socket.emit('desenhando', { sala: salaAtual, x: coords.x, y: coords.y, novoTraco: false, col: corFinal, tamanho: tamanhoTraço });
+            socket.emit('desenhando', { sala: salaAtual, x: coords.x, y: coords.y, novoTraco: false, col: corFinal, tamanho: tamanhoTraco });
         }
 
         canvas.addEventListener('mousedown', iniciarDesenho);

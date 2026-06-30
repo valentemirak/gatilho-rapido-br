@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express();
+const path = require('path'); // Adicionado para gerenciar os caminhos dos arquivos com segurança
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
     cors: {
@@ -8,7 +9,13 @@ const io = require('socket.io')(http, {
     }
 });
 
-app.use(express.static('public'));
+// CORREÇÃO AQUI: Aponta para a raiz do projeto onde os arquivos estão soltos
+app.use(express.static(__dirname));
+
+// CORREÇÃO EXTRA: Força o envio do index.html quando alguém acessar o link direto do Render
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 const bancoPalavras = {
     "animais": ["cachorro", "gato", "elefante", "girafa", "leao", "macaco", "jacare", "tartaruga"],
@@ -102,9 +109,9 @@ function passarVezProximo(salaId) {
     const categoriaSorteada = categories[Math.floor(Math.random() * categories.length)];
     const lista = bancoPalavras[categoriaSorteada];
     
-    const embaralhadas = [...lista].sort(() => 0.5 - Math.random());
-    const opcao1 = embaralhadas[0];
-    const opcao2 = embaralhadas[1];
+    const baskets = [...lista].sort(() => 0.5 - Math.random());
+    const opcao1 = baskets[0];
+    const opcao2 = baskets[1];
 
     infoSala.categoria = categoriaSorteada;
     infoSala.palavraSecreta = ""; 
@@ -168,7 +175,6 @@ function iniciarTempoDesenho(salaId) {
 
 io.on('connection', (socket) => {
     
-    // SISTEMA DE BUSCA DE PARTIDAS ALEATÓRIAS
     socket.on('buscar_partida_aleatoria', () => {
         let salaAlvo = null;
 
