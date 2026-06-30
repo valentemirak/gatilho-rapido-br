@@ -1,7 +1,12 @@
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+const io = require('socket.io')(http, {
+    cors: {
+        origin: "*", // Permite que o jogo no Itch.io se conecte sem problemas de CORS
+        methods: ["GET", "POST"]
+    }
+});
 
 app.use(express.static('public'));
 
@@ -93,8 +98,8 @@ function passarVezProximo(salaId) {
     const novoDesenhistaId = jogadores[proximoIndex];
     const novoDesenhistaSocket = io.sockets.sockets.get(novoDesenhistaId);
     
-    const categorias = Object.keys(bancoPalavras);
-    const categoriaSorteada = categorias[Math.floor(Math.random() * categorias.length)];
+    const categories = Object.keys(bancoPalavras);
+    const categoriaSorteada = categories[Math.floor(Math.random() * categories.length)];
     const lista = bancoPalavras[categoriaSorteada];
     
     const embaralhadas = [...lista].sort(() => 0.5 - Math.random());
@@ -167,11 +172,9 @@ io.on('connection', (socket) => {
     socket.on('buscar_partida_aleatoria', () => {
         let salaAlvo = null;
 
-        // Procura uma sala pública ativa que não esteja cheia e esteja em espera
         for (let idSala in salasAtivas) {
             if (idSala.startsWith('SALA-PUBLICA-')) {
                 const qtdJogadores = obterJogadoresDaSala(idSala).length;
-                // Mudado o limite da busca para até 6 jogadores
                 if (salasAtivas[idSala].status === "espera" && qtdJogadores < 6) {
                     salaAlvo = idSala;
                     break;
@@ -179,7 +182,6 @@ io.on('connection', (socket) => {
             }
         }
 
-        // Se não achou nenhuma sala pública aberta/elegível, gera o id e inicializa ela na memória
         if (!salaAlvo) {
             salaAlvo = "SALA-PUBLICA-" + Math.floor(1000 + Math.random() * 9000);
             salasAtivas[salaAlvo] = { 
@@ -192,7 +194,6 @@ io.on('connection', (socket) => {
             };
         }
 
-        // Envia o comando de volta para o cliente entrar nessa sala automaticamente
         socket.emit('sala_aleatoria_encontrada', { sala: salaAlvo });
     });
 
@@ -201,7 +202,6 @@ io.on('connection', (socket) => {
         socket.meuNome = dados.nome; 
         socket.salaAtual = dados.sala;
 
-        // Cria a sala se for privada (pois salas públicas já são inicializadas no evento acima)
         if (!salasAtivas[dados.sala]) {
             salasAtivas[dados.sala] = { 
                 desenhistaId: null, 
@@ -216,12 +216,10 @@ io.on('connection', (socket) => {
         } else {
             io.to(dados.sala).emit('mensagem_sistema', `${dados.nome} entrou no jogo! 🎯`);
             
-            // === CONTROLE DE INÍCIO AUTOMÁTICO DA SALA PÚBLICA ===
             const infoSalaPublica = salasAtivas[dados.sala];
             if (dados.sala.startsWith('SALA-PUBLICA-') && infoSalaPublica.status === "espera") {
                 const totalJogadores = obterJogadoresDaSala(dados.sala).length;
 
-                // 1. Condição de lotação máxima: 6 jogadores conectaram -> Inicia IMEDIATAMENTE
                 if (totalJogadores >= 6) {
                     if (infoSalaPublica.timeoutInicio) clearTimeout(infoSalaPublica.timeoutInicio);
                     if (infoSalaPublica.intervaloAviso) clearInterval(infoSalaPublica.intervaloAviso);
@@ -229,12 +227,10 @@ io.on('connection', (socket) => {
                     io.to(dados.sala).emit('mensagem_sistema', `🔥 Sala cheia (6/6)! A partida vai começar agora!`);
                     passarVezProximo(dados.sala);
                 } 
-                // 2. Condição de início por tempo: Começa a contar quando o 2º jogador entra
                 else if (totalJogadores === 2) {
                     let tempoRestante = 60;
                     io.to(dados.sala).emit('mensagem_sistema', `🎮 Jogadores suficientes conectados! A partida começará em ${tempoRestante} segundos ou quando atingir 6 jogadores...`);
                     
-                    // Envia notificações periódicas de contagem regressiva no chat a cada 15 segundos
                     infoSalaPublica.intervaloAviso = setInterval(() => {
                         tempoRestante -= 15;
                         if (tempoRestante > 0) {
@@ -242,7 +238,6 @@ io.on('connection', (socket) => {
                         }
                     }, 15000);
 
-                    // Executa o gatilho inicializador após 60 segundos completos
                     infoSalaPublica.timeoutInicio = setTimeout(() => {
                         clearInterval(infoSalaPublica.intervaloAviso);
                         if (salasAtivas[dados.sala] && salasAtivas[dados.sala].status === "espera") {
@@ -306,7 +301,7 @@ io.on('connection', (socket) => {
             infoSala.palavraSecreta = dados.palavra.toLowerCase();
             
             socket.emit('definir_papeis', { eDesenhista: true, categoria: infoSala.categoria, palavra: infoSala.palavraSecreta, status: "jogando" });
-            socket.to(dados.sala).emit('definir_papeis', { eDesenhista: false, category: infoSala.categoria, status: "jogando" });
+            socket.to(dados.sala).emit('definir_papeis', { eDesenhista: false, categoria: infoSala.categoria, status: "jogando" });
             
             io.to(dados.sala).emit('mensagem_sistema', `🎨 O desenhista escolheu a palavra! Valendo 50 segundos!`);
             socket.emit('mensagem_sistema', `🤫 SUA PALAVRA SECRETA É: ${infoSala.palavraSecreta.toUpperCase()}`);
@@ -371,7 +366,6 @@ io.on('connection', (socket) => {
                     atualizarPlacarGeral(salaId);
                 }
 
-                // Remove a sala inteira da memória e limpa os timers de início se ela esvaziar
                 if (obterJogadoresDaSala(salaId).length === 0) {
                     if (infoSala.intervalo) clearInterval(infoSala.intervalo);
                     if (infoSala.timeoutInicio) clearTimeout(infoSala.timeoutInicio);
@@ -384,6 +378,6 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, '0.0.0.0', () => {
+http.listen(PORT, () => {
     console.log(`Gatilho Rápido BR rodando na porta ${PORT}`);
 });
