@@ -19,6 +19,10 @@
         .btn-secundario { background: #444; color: #fff; margin-top: 5px; }
         .btn-secundario:hover { background: #555; }
         
+        /* Botão estilizado para sair da sala */
+        .btn-perigo { background-color: #dc3545; color: white; border: none; padding: 10px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; width: auto; font-size: 14px; transition: background 0.2s; }
+        .btn-perigo:hover { background-color: #c82333; }
+
         .divisor { margin: 15px 0; color: #666; font-size: 14px; display: flex; align-items: center; justify-content: center; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
         .divisor::before, .divisor::after { content: ""; flex: 1; background: #444; height: 1px; margin: 0 10px; }
 
@@ -93,6 +97,8 @@
             <h1>Gatilho Rápido BR 🎯</h1>
             <div id="timer" class="cronometro">--</div>
             <button id="btnControleVoz" class="btn-voz-mutado" onclick="alternarChatVoz()">🔇 VOZ: DESATIVADA</button>
+            <!-- Botão posicionado corretamente no cabeçalho da partida -->
+            <button id="btn-sair-sala" class="btn-perigo">🚪 Sair da Sala</button>
         </div>
         
         <button id="btnComecarJogo" onclick="solicitarInicio()">▶️ COMEÇAR JOGO</button>
@@ -130,7 +136,7 @@
             </div>
         </div>
     </div>
-
+    
     <div id="reprodutoresAudio" style="display: none;"></div>
 
     <!-- Script carregado de forma externa para funcionar no Itch.io conectando à nuvem -->
@@ -154,6 +160,11 @@
         let conexoesPeer = {};
         let vozAtiva = false;
         const configWebRTC = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        // Função do botão de sair configurada no clique
+        document.getElementById('btn-sair-sala').addEventListener('click', () => {
+            window.location.reload(); 
+        });
 
         async function alternarChatVoz() {
             const botao = document.getElementById('btnControleVoz');
@@ -374,13 +385,13 @@
         function moverDesenho(e) {
             if (!desenhando || !souODesenhistadaVez) return;
             const coords = obterCoordenadas(e);
-            const corFinal = modoBorracha ? "#FFFFFF" : corAtual;
+            const colFinal = modoBorracha ? "#FFFFFF" : corAtual;
             const tamanhoTraco = modoBorracha ? 20 : 4;
 
-            ctx.lineWidth = tamanhoTraco; ctx.lineCap = 'round'; ctx.strokeStyle = corFinal;
+            ctx.lineWidth = tamanhoTraco; ctx.lineCap = 'round'; ctx.strokeStyle = colFinal;
             ctx.lineTo(coords.x, coords.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(coords.x, coords.y);
 
-            socket.emit('desenhando', { sala: salaAtual, x: coords.x, y: coords.y, novoTraco: false, col: corFinal, tamanho: tamanhoTraco });
+            socket.emit('desenhando', { sala: salaAtual, x: coords.x, y: coords.y, novoTraco: false, col: colFinal, tamanho: tamanhoTraco });
         }
 
         canvas.addEventListener('mousedown', iniciarDesenho);

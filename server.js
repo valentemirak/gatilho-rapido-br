@@ -10,9 +10,11 @@ const io = require('socket.io')(http, {
 });
 
 // CORREÇÃO AQUI: Aponta para a raiz do projeto onde os arquivos estão soltos
+// Isso garante que o index.html, imagens e scripts do front-end sejam servidos corretamente.
 app.use(express.static(__dirname));
 
 // CORREÇÃO EXTRA: Força o envio do index.html quando alguém acessar o link direto do Render
+// Isso previne erros de navegação em alguns casos.
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -172,6 +174,8 @@ function iniciarTempoDesenho(salaId) {
         }
     }, 1000);
 }
+
+
 
 io.on('connection', (socket) => {
     
